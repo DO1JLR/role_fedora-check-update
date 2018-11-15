@@ -14,28 +14,51 @@
     list: updates
     update_cache: true
   register: yumoutput
+  when: ansible_distribution == "Fedora"
 
 - debug:
     msg: "{{ inventory_hostname}} {{ yumoutput.results|length }}"
-  when: yumoutput.results|length > 0
+  when: yumoutput.results|length > 0 and ansible_distribution == "Fedora"
 
 - name: make dnf recheck for new metadata from repos
   command: dnf clean expire-cache warn=false
+  when: ansible_distribution == "Fedora"
 
 - name: check for updates (dnf)
   dnf:
     list: updates
   register: dnfoutput
+  when: ansible_distribution == "Fedora"
 
 - debug: 
     msg: "{{ inventory_hostname}} {{ dnfoutput.results|length }}"
-  when: dnfoutput.results|length > 0
+  when: dnfoutput.results|length > 0 and ansible_distribution == "Fedora"
 
 - debug: 
     msg: "No new updates available"
-  when: dnfoutput.results|length > 0 and yumoutput.results|length > 0
+  when: dnfoutput.results|length > 0 and yumoutput.results|length > 0 and ansible_distribution == "Fedora"
 
 - name: upgrade all packages
   dnf:
     name: "*"
     state: latest
+  when: ansible_distribution == "Fedora"
+
+- name: install all updates
+  apt:
+    upgrade: dist
+    update_cache: yes
+    autoremove: yes
+    autoclean: yes
+  register: result
+  when: ansible_distribution == "Debian"
+
+- name: List installed and updated packages
+  shell: grep -E "^$(date +%Y-%m-%d).+ (install|upgrade) " /var/log/dpkg.log |cut -d " " -f 3-5
+  register: result
+  when: ansible_distribution == "Debian"
+
+- name: Show Output
+  debug: msg="{{ result.stdout_lines }}"
+  when: ansible_distribution == "Debian"
+
